@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     metrics_api_key: str = Field(default="change-me", min_length=8)
     rate_limit_requests: int = 5
     rate_limit_window_seconds: int = 900
+    trust_proxy_headers: bool = False
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
@@ -48,6 +49,11 @@ class Settings(BaseSettings):
     @property
     def ai_configured(self) -> bool:
         return self.ai_provider == "gemini" and bool(self.gemini_api_key)
+
+    def client_ip(self, direct_ip: str, forwarded_for: str | None) -> str:
+        if self.trust_proxy_headers and forwarded_for:
+            return forwarded_for.split(",", maxsplit=1)[0].strip()
+        return direct_ip
 
 
 @lru_cache

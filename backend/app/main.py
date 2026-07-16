@@ -37,6 +37,7 @@ app.include_router(router, prefix=settings.api_prefix, tags=["portfolio"])
 @app.middleware("http")
 async def access_log(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))[:100]
+    request.state.request_id = request_id
     started = time.perf_counter()
     try:
         response = await call_next(request)
@@ -50,24 +51,27 @@ async def access_log(request: Request, call_next):
     return response
 
 @app.exception_handler(ApplicationError)
-async def application_error(_: Request, exc: ApplicationError):
+async def application_error(request: Request, exc: ApplicationError):
     return JSONResponse(status_code=exc.status_code,
-        content={"error": {"code": exc.code, "message": exc.message}})
+        headers=exc.headers, content={"error": {"code": exc.code, "message": exc.message,
+        "request_id": getattr(request.state, "request_id", None)}})
 
 @app.exception_handler(RequestValidationError)
-async def validation_error(_: Request, exc: RequestValidationError):
+async def validation_error(request: Request, exc: RequestValidationError):
     return JSONResponse(status_code=422, content={"error": {"code": "validation_error",
-        "message": "Проверьте введённые данные", "details": exc.errors()}})
+        "message": "Проверьте введённые данные", "details": exc.errors(),
+        "request_id": getattr(request.state, "request_id", None)}})
 
 @app.exception_handler(SQLAlchemyError)
-async def database_error(_: Request, exc: SQLAlchemyError):
+async def database_error(request: Request, exc: SQLAlchemyError):
     logger.exception("Database error", exc_info=exc)
     return JSONResponse(status_code=503, content={"error": {
-        "code": "database_unavailable", "message": "Сервис временно недоступен"}})
+        "code": "database_unavailable", "message": "Сервис временно недоступен",
+        "request_id": getattr(request.state, "request_id", None)}})
 
 @app.exception_handler(Exception)
-async def unknown_error(_: Request, exc: Exception):
+async def unknown_error(request: Request, exc: Exception):
     logger.exception("Unexpected error", exc_info=exc)
     return JSONResponse(status_code=500, content={"error": {
-        "code": "internal_error", "message": "Внутренняя ошибка сервиса"}})
-
+        "code": "internal_error", "message": "Внутренняя ошибка сервиса",
+        "request_id": getattr(request.state, "request_id", None)}})
