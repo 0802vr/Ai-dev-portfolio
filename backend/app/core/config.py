@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     metrics_api_key: str = Field(default="change-me", min_length=8)
     rate_limit_requests: int = 5
     rate_limit_window_seconds: int = 900
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.environment.lower() == "production":
+            if self.metrics_api_key == "change-me":
+                raise ValueError("METRICS_API_KEY must be changed in production")
+            if not self.allowed_origins or "*" in self.allowed_origins:
+                raise ValueError("CORS_ORIGINS must contain explicit origins in production")
+        return self
 
     @property
     def allowed_origins(self) -> list[str]:
