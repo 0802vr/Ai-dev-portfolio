@@ -1,0 +1,10 @@
+{
+  "info": {"name": "AI Developer Portfolio API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "variable": [{"key": "baseUrl", "value": "http://localhost:8000"}, {"key": "metricsApiKey", "value": "replace-me"}],
+  "item": [
+    {"name": "Health", "request": {"method": "GET", "url": "{{baseUrl}}/api/health"}, "event": [{"listen": "test", "script": {"exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]}}]},
+    {"name": "Create contact", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"name\": \"Анна\",\n  \"phone\": \"+7 999 123-45-67\",\n  \"email\": \"anna@example.com\",\n  \"comment\": \"Нужен корпоративный сайт с личным кабинетом\"\n}"}, "url": "{{baseUrl}}/api/contact"}, "event": [{"listen": "test", "script": {"exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));", "pm.test('Has request id', () => pm.expect(pm.response.headers.get('X-Request-ID')).to.exist);"]}}]},
+    {"name": "Metrics", "request": {"method": "GET", "header": [{"key": "X-API-Key", "value": "{{metricsApiKey}}"}], "url": "{{baseUrl}}/api/metrics"}
+  ]
+}
+
