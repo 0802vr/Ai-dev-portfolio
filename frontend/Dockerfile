@@ -12,6 +12,7 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 RUN addgroup --system nodejs && adduser --system --ingroup nodejs nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
