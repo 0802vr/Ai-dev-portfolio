@@ -32,10 +32,14 @@ class AIService:
             async with httpx.AsyncClient(timeout=self.settings.ai_timeout_seconds) as client:
                 response = await client.post(url, headers={"X-goog-api-key": self.settings.gemini_api_key},
                     json={"contents": [{"parts": [{"text": prompt}]}],
-                          "generationConfig": {"responseMimeType": "application/json"}})
+                          "generationConfig": {"responseMimeType": "application/json",
+                            "responseJsonSchema": AIAnalysis.model_json_schema()}})
                 response.raise_for_status()
             raw = response.json()["candidates"][0]["content"]["parts"][0]["text"]
             return AIAnalysis.model_validate(json.loads(raw)).model_copy(update={"used_fallback": False})
+        except httpx.HTTPStatusError as exc:
+            logger.warning("Gemini fallback: HTTP %s", exc.response.status_code)
+            return self.fallback(data)
         except Exception as exc:
-            logger.warning("Gemini fallback activated", extra={"error_type": type(exc).__name__})
+            logger.warning("Gemini fallback: %s", type(exc).__name__)
             return self.fallback(data)

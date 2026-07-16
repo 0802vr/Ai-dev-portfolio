@@ -1,6 +1,7 @@
 import re
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -29,9 +30,9 @@ class ContactCreate(BaseModel):
 
 
 class AIAnalysis(BaseModel):
-    category: str = Field(max_length=40)
-    sentiment: str = Field(max_length=20)
-    priority: str = Field(max_length=20)
+    category: Literal["website", "mobile", "consulting", "ai", "support", "other"]
+    sentiment: Literal["positive", "neutral", "negative"]
+    priority: Literal["low", "medium", "high"]
     summary: str = Field(max_length=300)
     suggested_reply: str = Field(max_length=1500)
     used_fallback: bool = False
@@ -58,4 +59,3 @@ class MetricsResponse(BaseModel):
     contacts_today: int
     ai_fallbacks: int
     failed_notifications: int
-
