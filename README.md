@@ -6,8 +6,10 @@ Backend-ориентированное тестовое задание: адап
 
 - `POST /api/contact`: валидация, rate limit, сохранение, Gemini-анализ и два email-уведомления.
 - `GET /api/health`: состояние БД и конфигурации интеграций.
+- `GET /api/health/live` и `/api/health/ready`: liveness/readiness probes.
 - `GET /api/metrics`: защищённая агрегированная статистика.
 - Graceful fallback: отсутствие/таймаут/ошибка AI не мешают принять заявку.
+- Alembic-миграции и атомарный PostgreSQL rate limiting с `Retry-After`.
 - PostgreSQL, JSON-логи с ротацией, request ID, единый формат ошибок, CORS.
 - Swagger: `http://localhost:8000/docs`.
 - Next.js-лендинг с Zustand-формой, scroll-анимациями и адаптивной сеткой.
@@ -96,7 +98,9 @@ backend
 
 Заявка сохраняется **до** отправки почты. Если SMTP недоступен, API всё равно возвращает `201`, а статусы `owner_delivery`/`user_delivery` и тип ошибки остаются в БД. Для production следующим шагом будет outbox + очередь повторной доставки.
 
-Rate limiting хранится в PostgreSQL и считает заявки по SHA-256 от IP за скользящее окно. Это работает между несколькими экземплярами API без Redis, но при большой нагрузке лучше перейти на Redis.
+Rate limiting хранится в PostgreSQL: атомарный upsert увеличивает bucket по SHA-256 от IP и фиксированному временному окну. Это работает между несколькими экземплярами API без Redis. За reverse proxy включите `TRUST_PROXY_HEADERS=true` только если прокси очищает входящий `X-Forwarded-For`.
+
+Схема БД управляется Alembic. Backend-контейнер перед запуском выполняет `alembic upgrade head`; `create_all()` в runtime не используется.
 
 ## AI-интеграция
 
@@ -132,7 +136,7 @@ npm test
 npm run build
 ```
 
-CI выполняет backend lint/tests, frontend lint/typecheck/tests/build и затем Docker build. Секреты для CI не нужны: AI fallback тестируется без внешнего ключа.
+CI выполняет backend lint/tests, frontend lint/typecheck/tests/build, Playwright desktop/mobile и затем Docker build. Секреты для CI не нужны: AI fallback тестируется без внешнего ключа. Текущий backend-набор содержит 13 тестов и покрывает около 76% кода.
 
 ## Деплой
 
